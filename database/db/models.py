@@ -21,7 +21,7 @@ class Admin(models.Model):
 
     telegram_id = models.BigIntegerField(primary_key=True)
     username = models.CharField(max_length=32)
-    role = models.CharField(max_length=20, choices=ROLES)
+    role = models.CharField(max_length=20, choices=ROLES, default=ADMIN)
 
 
 class Executor(models.Model):
