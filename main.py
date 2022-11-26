@@ -46,7 +46,7 @@ async def callback_inline(call):
                                            caption=config.text_menu, reply_markup=keyboard)
         if call.data == 'support':
             keyboard = get_buttons(call.data)
-            await bot.edit_message_caption(chat_id=cal.message.chat.id, message_id=call.message.message_id,
+            await bot.edit_message_caption(chat_id=call.message.chat.id, message_id=call.message.message_id,
                                            caption=config.support_text, reply_markup=keyboard)
 
 
