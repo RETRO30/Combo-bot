@@ -15,6 +15,8 @@ DATABASES = {
     }
 }
 
+TIME_ZONE = "Europe/Moscow"
+USE_TZ = True 
 
 """
 To connect to an existing postgres database, first:
