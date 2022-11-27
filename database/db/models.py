@@ -1,7 +1,8 @@
-import sys
+import datetime
 
 from django.core.validators import RegexValidator
 from django.db import models
+from django.db.models import Q
 from django.utils import timezone
 
 
@@ -23,34 +24,51 @@ class Admin(models.Model):
 
 class Executor(models.Model):
     """Описывает модель исполнителя."""
-    #TODO: add timezone info
+    # TODO: add timezone info
 
     telegram_id = models.BigIntegerField(primary_key=True)
     username = models.CharField(max_length=32)
-    card_number = models.CharField(max_length=16, validators=[RegexValidator(r"\d{16}")])  # with no hyphens
+    card_number = models.CharField(max_length=16, validators=[
+                                   RegexValidator(r"\d{16}")])  # with no hyphens
     time_unbanned = models.DateTimeField(null=True, default=None)
-    accounts_num = models.SmallIntegerField(verbose_name="количество аккаунтов в Авито", default=1)
+    accounts_num = models.SmallIntegerField(
+        verbose_name="количество аккаунтов в Авито", default=1)
 
     @property
     def is_banned(self):
         return timezone.now() >= self.time_unbanned
 
-    def get_tasks(self):
+    def get_tasks(self) -> models.query.QuerySet:
+        """Возвращает все задачи исполнителя за всё время."""
+
         return self.tasks.objects.all()
 
-    def get_tasks_num(self):
-        return self.tasks.objects.count()
+    def get_tasks_num(self) -> int:
+        """Возвращает количество всех задач исполнителя за всё время."""
+        return self.get_tasks().count()
 
-    def get_today_tasks(self):
-        raise NotImplemented()
+    def get_today_tasks(self) -> models.query.QuerySet:
+        """Возвращает все задачи исполнителя за прошедшие 24 часа (запланированные или исполненные).
+        """
+        delta = datetime.timedelta(hours=24)
+
+        now = timezone.now()
+
+        return self.tasks.objects.filter(
+            Q(planned_time__range=(now - delta, now))
+            | Q(executed_time__range=(now - delta, now))
+        )
+
+    def get_today_tasks_num(self) -> int:
+        return self.get_today_tasks().count()
 
     def get_available_tasks(self):
         raise NotImplemented()
 
-    def get_current_tasks(self):
+    def get_current_tasks(self) -> models.query.QuerySet:
         return self.tasks.objects.filter(status__in=(Task.IN_WORK, Task.READY_NOT_CHECKED))
     
-    def get_done_tasks(self):
+    def get_done_tasks(self) -> models.query.QuerySet:
         return self.tasks.objects.filter(status__in=(Task.READY_CHECKED, Task.PAID))
 
 
