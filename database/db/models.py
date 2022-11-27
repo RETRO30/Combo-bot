@@ -1,7 +1,7 @@
 import sys
 
 from django.core.validators import RegexValidator
-    from django.db import models
+from django.db import models
 from django.utils import timezone
 
 
@@ -29,13 +29,17 @@ class Executor(models.Model):
     username = models.CharField(max_length=32)
     card_number = models.CharField(max_length=16, validators=[RegexValidator(r"\d{16}")])  # with no hyphens
     time_unbanned = models.DateTimeField(null=True, default=None)
+    accounts_num = models.SmallIntegerField(verbose_name="количество аккаунтов в Авито", default=1)
 
     @property
     def is_banned(self):
         return timezone.now() >= self.time_unbanned
 
     def get_tasks(self):
-        return self.tasks
+        return self.tasks.objects.all()
+
+    def get_tasks_num(self):
+        return self.tasks.objects.count()
 
     def get_today_tasks(self):
         raise NotImplemented()
@@ -44,7 +48,10 @@ class Executor(models.Model):
         raise NotImplemented()
 
     def get_current_tasks(self):
-        raise NotImplemented()
+        return self.tasks.objects.filter(status__in=(Task.IN_WORK, Task.READY_NOT_CHECKED))
+    
+    def get_done_tasks(self):
+        return self.tasks.objects.filter(status__in=(Task.READY_CHECKED, Task.PAID))
 
 
 class Task(models.Model):
