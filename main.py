@@ -1,5 +1,5 @@
 import config
-#from Database.db.models import Admin, Executor, Task
+from database.public import Admin, Executor, Task
 import logging
 from aiogram import Bot, Dispatcher, executor, types
 
@@ -16,7 +16,7 @@ def get_buttons(command):
                        'Создать заказ': 'create_task',
                        'Информация для админов': 'info_for_admins',
                        'Заказы': 'task_for_admins'}
-    buttons_for_command = {'start': ['Заказы', 'Отзывы', 'Баланс', 'Тех-поддержка'],
+    buttons_for_command = {'start': ['Задания', 'Отзывы', 'Баланс', 'Тех-поддержка'],
                            'test': ['Главное меню'],
                            'support': ['Главное меню'],
                            'admin_menu': ['Создать заказ', 'Заказы', 'Главное меню', 'Информация для админов'],
@@ -35,7 +35,7 @@ def get_buttons(command):
 async def menu(message):
     await bot.delete_message(message.chat.id, message.message_id)
     keyboard = get_buttons(message.text)
-    keyboard.add(types.InlineKeyboardButton('Админская панель', callback_data='admin_menu'))
+    keyboard.add(types.InlineKeyboardButton('Панель администрирования', callback_data='admin_menu'))
     await bot.send_photo(message.chat.id, types.InputFile('for_test.png'), config.text_menu,
                          reply_markup=keyboard)
 
@@ -46,43 +46,42 @@ async def callback_inline(call):
         if call.data == 'test':
             keyboard = get_buttons(call.data)
             await bot.delete_message(chat_id=call.message.chat.id, message_id=call.message.message_id)
-            await bot.send_photo(call.chat.id, types.InputFile('for_test.png'), 'Тест',
+            await bot.send_photo(call.message.chat.id, types.InputFile('for_test.png'), 'Тест',
                                  reply_markup=keyboard)
         if call.data == 'start':
             keyboard = get_buttons(call.data)
+            keyboard.add(types.InlineKeyboardButton('Панель администрирования', callback_data='admin_menu'))
             await bot.delete_message(chat_id=call.message.chat.id, message_id=call.message.message_id)
-            await bot.send_photo(call.chat.id, types.InputFile('for_test.png'), config.text_menu,
+            await bot.send_photo(call.message.chat.id, types.InputFile('for_test.png'), config.text_menu,
                                  reply_markup=keyboard)
         if call.data == 'support':
             keyboard = get_buttons(call.data)
             await bot.delete_message(chat_id=call.message.chat.id, message_id=call.message.message_id)
-            await bot.send_photo(call.chat.id, types.InputFile('for_test.png'), config.support_text,
+            await bot.send_photo(call.message.chat.id, types.InputFile('for_test.png'), config.support_text,
                                  reply_markup=keyboard)
         if call.data == 'admin_menu':
             keyboard = get_buttons(call.data)
             keyboard.add(types.InlineKeyboardButton('Управление администрацией', callback_data='manage_admins'))
             await bot.delete_message(chat_id=call.message.chat.id, message_id=call.message.message_id)
-            await bot.send_photo(call.chat.id, types.InputFile('for_test.png'), 'Админ панель',
+            await bot.send_photo(call.message.chat.id, types.InputFile('for_test.png'), 'Админ панель',
                          reply_markup=keyboard)
 
         if call.data == 'create_task':
             keyboard = get_buttons(call.data)
             await bot.delete_message(chat_id=call.message.chat.id, message_id=call.message.message_id)
-            await bot.send_photo(call.chat.id, types.InputFile('for_test.png'), 'Создание заказа',
+            await bot.send_photo(call.message.chat.id, types.InputFile('for_test.png'), 'Создание заказа',
                                  reply_markup=keyboard)
         if call.data == 'info_for_admins':
             keyboard = get_buttons(call.data)
             await bot.delete_message(chat_id=call.message.chat.id, message_id=call.message.message_id)
-            await bot.send_photo(call.chat.id, types.InputFile('for_test.png'), 'Информация для администарции',
+            await bot.send_photo(call.message.chat.id, types.InputFile('for_test.png'), 'Информация для администарции',
                                  reply_markup=keyboard)
 
         if call.data == 'task_for_admins':
             keyboard = get_buttons(call.data)
             await bot.delete_message(chat_id=call.message.chat.id, message_id=call.message.message_id)
-            await bot.send_photo(call.chat.id, types.InputFile('for_test.png'), 'Все заказы администратора',
+            await bot.send_photo(call.message.chat.id, types.InputFile('for_test.png'), 'Все заказы администратора',
                                  reply_markup=keyboard)
-
-
 
 
 @dp.message_handler(lambda message: True)
