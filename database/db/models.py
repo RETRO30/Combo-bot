@@ -1,12 +1,9 @@
 import sys
 
-try:
+from django.core.validators import RegexValidator
     from django.db import models
-except Exception:
-    print('Exception: Django Not Found, please install it with "pip install django".')
-    sys.exit()
-
 from django.utils import timezone
+
 
 class Admin(models.Model):
     ADMIN = "admin"
@@ -30,7 +27,7 @@ class Executor(models.Model):
 
     telegram_id = models.BigIntegerField(primary_key=True)
     username = models.CharField(max_length=32)
-    card_number = models.CharField(max_length=16)  # with no hyphens
+    card_number = models.CharField(max_length=16, validators=[RegexValidator(r"\d{16}")])  # with no hyphens
     time_unbanned = models.DateTimeField(null=True, default=None)
 
     @property
@@ -96,6 +93,10 @@ class Task(models.Model):
     execution_price = models.DecimalField(
         verbose_name="плата исполнителю",
         max_digits=5, decimal_places=2
+    )
+    executed_time = models.DateTimeField(
+        verbose_name="время, когда было исполнено",
+        null=True
     )
 
     # Admin fields (all marked with _)
