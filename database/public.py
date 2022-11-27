@@ -1,11 +1,12 @@
 import os
 import sys
+from pathlib import Path
 
 import django
 
 # A crutch to avoid import issues
-if os.path.abspath('..') not in sys.path:
-    sys.path.append(os.path.abspath('..')) 
+if str(Path(__file__).parent.parent.absolute()) not in sys.path:
+    sys.path.append(str(Path(__file__).parent.parent.absolute()))
 
 # Turn off bytecode generation
 sys.dont_write_bytecode = True

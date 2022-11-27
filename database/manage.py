@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 import os
 import sys
-
+from pathlib import Path
 
 if __name__ == "__main__":
     # A crutch to avoid import issues
-    if os.path.abspath('..') not in sys.path:
-        sys.path.append(os.path.abspath('..')) 
+    if str(Path(__file__).parent.parent.absolute()) not in sys.path:
+        sys.path.append(str(Path(__file__).parent.parent.absolute()))
 
 
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
