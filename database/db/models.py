@@ -31,7 +31,7 @@ class Executor(models.Model):
     telegram_id = models.BigIntegerField(primary_key=True)
     username = models.CharField(max_length=32)
     card_number = models.CharField(max_length=16)  # with no hyphens
-    time_unbanned = models.DateTimeField(default=None)
+    time_unbanned = models.DateTimeField(null=True, default=None)
 
     @property
     def is_banned(self):
