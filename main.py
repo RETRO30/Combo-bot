@@ -9,7 +9,7 @@ bot = Bot(config.token)
 dp = Dispatcher(bot)
 
 
-def get_buttons(command):
+def get_buttons(command, only_buttons=False):
     name_to_command = {'Главное меню': 'start',
                        'Задания': 'tasks_executor',
                        'Отзывы': 'test',
@@ -24,11 +24,14 @@ def get_buttons(command):
                            'admin_menu': ['Создать заказ', 'Заказы', 'Главное меню', 'Информация для админов'],
                            'create_task': ['Главное меню'],
                            'info_for_admins': ['Главное меню'],
-                           'task_for_admins': ['Главное меню']}
+                           'task_for_admins': ['Главное меню'],
+                           'tasks_executor': ['Главное меню']}
     keyboard = types.InlineKeyboardMarkup(row_width=2)
     res = []
     for button_name in buttons_for_command[command.replace('/', '')]:
         res.append(types.InlineKeyboardButton(button_name, callback_data=name_to_command[button_name]))
+    if only_buttons:
+        return res
     keyboard.add(*res)
     return keyboard
 
@@ -38,7 +41,7 @@ async def menu(message):
     await bot.delete_message(message.chat.id, message.message_id)
     keyboard = get_buttons(message.text)
     keyboard.add(types.InlineKeyboardButton('Панель администрирования', callback_data='admin_menu'))
-    await bot.send_photo(message.chat.id, images.image_executor_menu, config.text_menu,
+    await bot.send_photo(message.chat.id, images.image_executor_menu, texts.text_menu,
                          reply_markup=keyboard)
 
 
@@ -51,7 +54,11 @@ async def callback_inline(call):
             await bot.send_photo(call.message.chat.id, images.image_executor_menu, 'Тест',
                                  reply_markup=keyboard)
         if call.data == 'tasks_executor':
-            keyboard = get_buttons(call.data)
+            keyboard = types.InlineKeyboardMarkup(row_width=1)
+            for task in Task.get_current_tasks():
+                pass
+            buttons = get_buttons(call.data, only_buttons=True)
+            keyboard.add(buttons)
             await bot.delete_message(chat_id=call.message.chat.id, message_id=call.message.message_id)
             await bot.send_photo(call.message.chat.id, images.image_executor_menu, 'Тест',
                                  reply_markup=keyboard)
@@ -59,12 +66,12 @@ async def callback_inline(call):
             keyboard = get_buttons(call.data)
             keyboard.add(types.InlineKeyboardButton('Панель администрирования', callback_data='admin_menu'))
             await bot.delete_message(chat_id=call.message.chat.id, message_id=call.message.message_id)
-            await bot.send_photo(call.message.chat.id, images.image_executor_menu, config.text_menu,
+            await bot.send_photo(call.message.chat.id, images.image_executor_menu, texts.text_menu,
                                  reply_markup=keyboard)
         if call.data == 'support':
             keyboard = get_buttons(call.data)
             await bot.delete_message(chat_id=call.message.chat.id, message_id=call.message.message_id)
-            await bot.send_photo(call.message.chat.id, images.image_support_menu, config.support_text,
+            await bot.send_photo(call.message.chat.id, images.image_support_menu, texts.support_text,
                                  reply_markup=keyboard)
         if call.data == 'admin_menu':
             keyboard = get_buttons(call.data)
