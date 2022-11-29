@@ -30,7 +30,7 @@ class Executor(models.Model):
     username = models.CharField(max_length=32)
     card_number = models.CharField(max_length=16, validators=[
                                    RegexValidator(r"\d{16}")])  # with no hyphens
-    time_unbanned = models.DateTimeField(null=True, default=None)
+    time_unbanned = models.DateTimeField(null=True, blank=True, default=None)
     accounts_num = models.SmallIntegerField(
         verbose_name="количество аккаунтов в Авито", default=1)
 
@@ -41,7 +41,7 @@ class Executor(models.Model):
     def get_tasks(self) -> models.query.QuerySet:
         """Возвращает все задачи исполнителя за всё время."""
 
-        return self.tasks.objects.all()
+        return self.tasks.all()
 
     def get_tasks_num(self) -> int:
         """Возвращает количество всех задач исполнителя за всё время."""
@@ -54,7 +54,7 @@ class Executor(models.Model):
 
         now = timezone.now()
 
-        return self.tasks.objects.filter(
+        return self.tasks.filter(
             Q(planned_time__range=(now - delta, now))
             | Q(executed_time__range=(now - delta, now))
         )
@@ -66,10 +66,11 @@ class Executor(models.Model):
         raise NotImplemented()
 
     def get_current_tasks(self) -> models.query.QuerySet:
-        return self.tasks.objects.filter(status__in=(Task.IN_WORK, Task.READY_NOT_CHECKED))
-    
+        return self.tasks.filter(status__in=(
+            Task.IN_WORK, Task.READY_NOT_CHECKED))
+
     def get_done_tasks(self) -> models.query.QuerySet:
-        return self.tasks.objects.filter(status__in=(Task.READY_CHECKED, Task.PAID))
+        return self.tasks.filter(status__in=(Task.READY_CHECKED, Task.PAID))
 
 
 class Task(models.Model):
@@ -113,21 +114,22 @@ class Task(models.Model):
     )
 
     # Executor related fields
-    executor = models.ForeignKey(Executor, models.CASCADE, null=True)
-    accepted_time = models.DateTimeField(null=True)
+    executor = models.ForeignKey(
+        Executor, models.CASCADE, null=True, blank=True, related_name="tasks")
+    accepted_time = models.DateTimeField(null=True, blank=True)
     execution_price = models.DecimalField(
         verbose_name="плата исполнителю",
         max_digits=5, decimal_places=2
     )
     executed_time = models.DateTimeField(
         verbose_name="время, когда было исполнено",
-        null=True
+        null=True, blank=True
     )
 
     # Admin fields (all marked with _)
     _order_price = models.DecimalField(
         verbose_name="цена заказа",
-        max_digits=5, decimal_places=2
+        max_digits=5, decimal_places=2, default=0
     )
     _admin = models.ForeignKey(Admin, models.CASCADE)
     _creation_time = models.DateTimeField(
@@ -135,5 +137,5 @@ class Task(models.Model):
         auto_now_add=True
     )
     _note = models.TextField(
-        verbose_name="примечание"
+        verbose_name="примечание", blank=True
     )
