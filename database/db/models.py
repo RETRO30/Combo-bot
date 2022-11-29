@@ -5,6 +5,8 @@ from django.db import models
 from django.db.models import Q
 from django.utils import timezone
 
+from config import REVIEWS_PER_A_DAY
+
 
 class Admin(models.Model):
     ADMIN = "admin"
@@ -63,7 +65,27 @@ class Executor(models.Model):
         return self.get_today_tasks().count()
 
     def get_available_tasks(self):
-        raise NotImplemented()
+        daily_limit = self.accounts_num*REVIEWS_PER_A_DAY
+        result = []
+        delta = datetime.timedelta(hours=24)
+
+        for new_task in Task.objects.filter(status=Task.PENDING):
+            new_time = new_task.planned_time
+
+            tasks_before_num = self.tasks.filter(planned_time__range=(
+                new_time-delta, new_time
+            )).count()
+
+            tasks_after_num = self.tasks.filter(planned_time__range=(
+                new_time, new_time+delta
+            )).count()
+
+            if tasks_before_num >= daily_limit or tasks_after_num >= daily_limit:
+                continue
+            else:
+                result.append(new_task)
+
+        return result
 
     def get_current_tasks(self) -> models.query.QuerySet:
         return self.tasks.filter(status__in=(
