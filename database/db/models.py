@@ -9,6 +9,11 @@ from django.utils import timezone
 from config import REVIEWS_PER_A_DAY
 
 
+class UserManager(models.Manager):
+    @sync_to_async
+    def register_user(self, **kwargs):
+        return self.create(**kwargs)
+
 class Admin(models.Model):
     ADMIN = "admin"
     SUPER_ADMIN = "super-admin"
@@ -40,6 +45,8 @@ class Admin(models.Model):
         if type(statuses) is int:
             statuses = [statuses]
         return self.tasks.filter(status__in=statuses)
+    
+    objects = UserManager()
 
 
 
@@ -117,6 +124,9 @@ class Executor(models.Model):
                 result.append(new_task)
 
         return result
+
+        objects = UserManager()
+
 
     @sync_to_async
     def get_current_tasks(self) -> models.query.QuerySet:
