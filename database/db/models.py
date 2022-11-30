@@ -1,6 +1,5 @@
 import datetime
 
-from asgiref.sync import sync_to_async
 from django.core.validators import RegexValidator
 from django.db import models
 from django.db.models import Q
@@ -24,12 +23,10 @@ class Admin(models.Model):
     username = models.CharField(max_length=32)
     role = models.CharField(max_length=20, choices=ROLES, default=ADMIN)
 
-    @sync_to_async
     def get_tasks(self) -> models.query.QuerySet:
         """Возращает все задачи, созданные админом"""
         return self.tasks.all()
     
-    @sync_to_async
     def get_tasks_by_status(self, statuses) -> models.query.QuerySet:
         """Возращает все задачи, созданные админом, соответствующие статусу
         
@@ -54,22 +51,19 @@ class Executor(models.Model):
     accounts_num = models.SmallIntegerField(
         verbose_name="количество аккаунтов в Авито", default=1)
 
-    @sync_to_async
+    @property
     def is_banned(self):
         return timezone.now() >= self.time_unbanned
 
-    @sync_to_async
     def get_tasks(self) -> models.query.QuerySet:
         """Возвращает все задачи исполнителя за всё время."""
 
         return self.tasks.all()
 
-    @sync_to_async
     def get_tasks_num(self) -> int:
         """Возвращает количество всех задач исполнителя за всё время."""
         return self.get_tasks().count()
 
-    @sync_to_async
     def get_today_tasks(self) -> models.query.QuerySet:
         """Возвращает все задачи исполнителя за прошедшие 24 часа (запланированные или исполненные).
         """
@@ -82,12 +76,10 @@ class Executor(models.Model):
             | Q(executed_time__range=(now - delta, now))
         )
 
-    @sync_to_async
     def get_today_tasks_num(self) -> int:
         """Возвращает количество задач исполнителя за последние  24 часа"""
         return self.get_today_tasks().count()
 
-    @sync_to_async
     def get_available_tasks(self) -> list:
         """Возвращает список доступных работ для Исполнителя.
 
@@ -118,14 +110,12 @@ class Executor(models.Model):
 
         return result
 
-    @sync_to_async
     def get_current_tasks(self) -> models.query.QuerySet:
         """Возращает текущие задачи Исполнителя"""
 
         return self.tasks.filter(status__in=(
             Task.IN_WORK, Task.READY_NOT_CHECKED))
 
-    @sync_to_async
     def get_done_tasks(self) -> models.query.QuerySet:
         """Возращает завершённые задачи Исполнителя"""
         return self.tasks.filter(status__in=(Task.READY_CHECKED, Task.PAID))
@@ -201,6 +191,5 @@ class Task(models.Model):
         verbose_name="примечание", blank=True
     )
 
-    @sync_to_async
     def __str__(self) -> str:
         return self.short_name
