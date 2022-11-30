@@ -30,8 +30,7 @@ class Executor(models.Model):
 
     telegram_id = models.BigIntegerField(primary_key=True)
     username = models.CharField(max_length=32)
-    card_number = models.CharField(max_length=16, validators=[
-                                   RegexValidator(r"\d{16}")])  # with no hyphens
+    payment_method = models.CharField(max_length=50, blank=True)
     time_unbanned = models.DateTimeField(null=True, blank=True, default=None)
     accounts_num = models.SmallIntegerField(
         verbose_name="количество аккаунтов в Авито", default=1)
@@ -116,6 +115,7 @@ class Task(models.Model):
     PAID = 4
     FUCKED_UP = 5
     MISSED = 6
+    CANCELLED = 7
 
     STATUSES = [
         (PENDING, "ожидает исполнителя"),
@@ -125,9 +125,11 @@ class Task(models.Model):
         (PAID, "оплачена"),
         (FUCKED_UP, "исполнитель просрал время"),
         (MISSED, "никто не взял задание в срок"),
+        (CANCELLED, "работа по задаче отменена"),
     ]
 
     # Common fields
+    short_name = models.CharField(verbose_name="короткое имя", max_length=50)
     status = models.SmallIntegerField(verbose_name="статус",
                                       choices=STATUSES, default=PENDING)
     post_link = models.CharField(
@@ -164,7 +166,7 @@ class Task(models.Model):
         verbose_name="цена заказа",
         max_digits=5, decimal_places=2, default=0
     )
-    _admin = models.ForeignKey(Admin, models.CASCADE)
+    _admin = models.ForeignKey(Admin, models.CASCADE, related_name="tasks")
     _creation_time = models.DateTimeField(
         verbose_name="время создания задания",
         auto_now_add=True
@@ -172,3 +174,6 @@ class Task(models.Model):
     _note = models.TextField(
         verbose_name="примечание", blank=True
     )
+
+    def __str__(self) -> str:
+        return self.short_name
