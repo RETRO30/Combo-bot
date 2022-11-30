@@ -23,6 +23,22 @@ class Admin(models.Model):
     username = models.CharField(max_length=32)
     role = models.CharField(max_length=20, choices=ROLES, default=ADMIN)
 
+    def get_tasks(self) -> models.query.QuerySet:
+        """Возращает все задачи, созданные админом"""
+        return self.tasks.all()
+    
+    def get_tasks_by_status(self, statuses) -> models.query.QuerySet:
+        """Возращает все задачи, созданные админом, соответствующие статусу
+        
+        statuses -- int or iterable. If iterable, tasks with their status
+            in `statuses` are returned
+        """
+
+        if type(statuses) is int:
+            statuses = [statuses]
+        return self.tasks.filter(status__in=statuses)
+
+
 
 class Executor(models.Model):
     """Описывает модель исполнителя."""
@@ -30,8 +46,7 @@ class Executor(models.Model):
 
     telegram_id = models.BigIntegerField(primary_key=True)
     username = models.CharField(max_length=32)
-    card_number = models.CharField(max_length=16, validators=[
-                                   RegexValidator(r"\d{16}")])  # with no hyphens
+    payment_method = models.CharField(max_length=50, blank=True)
     time_unbanned = models.DateTimeField(null=True, blank=True, default=None)
     accounts_num = models.SmallIntegerField(
         verbose_name="количество аккаунтов в Авито", default=1)
@@ -62,9 +77,17 @@ class Executor(models.Model):
         )
 
     def get_today_tasks_num(self) -> int:
+        """Возвращает количество задач исполнителя за последние  24 часа"""
         return self.get_today_tasks().count()
 
-    def get_available_tasks(self):
+    def get_available_tasks(self) -> list:
+        """Возвращает список доступных работ для Исполнителя.
+
+        Возвращает список доступных работ, учитывая, что Исполнитель
+        с одним аккаунтом не может оставлять больше, чем
+        config.REVIEWS_PER_A_DAY в день.
+        """
+
         daily_limit = self.accounts_num*REVIEWS_PER_A_DAY
         result = []
         delta = datetime.timedelta(hours=24)
@@ -88,10 +111,13 @@ class Executor(models.Model):
         return result
 
     def get_current_tasks(self) -> models.query.QuerySet:
+        """Возращает текущие задачи Исполнителя"""
+
         return self.tasks.filter(status__in=(
             Task.IN_WORK, Task.READY_NOT_CHECKED))
 
     def get_done_tasks(self) -> models.query.QuerySet:
+        """Возращает завершённые задачи Исполнителя"""
         return self.tasks.filter(status__in=(Task.READY_CHECKED, Task.PAID))
 
 
@@ -105,6 +131,7 @@ class Task(models.Model):
     PAID = 4
     FUCKED_UP = 5
     MISSED = 6
+    CANCELLED = 7
 
     STATUSES = [
         (PENDING, "ожидает исполнителя"),
@@ -114,9 +141,11 @@ class Task(models.Model):
         (PAID, "оплачена"),
         (FUCKED_UP, "исполнитель просрал время"),
         (MISSED, "никто не взял задание в срок"),
+        (CANCELLED, "работа по задаче отменена"),
     ]
 
     # Common fields
+    short_name = models.CharField(verbose_name="короткое имя", max_length=50)
     status = models.SmallIntegerField(verbose_name="статус",
                                       choices=STATUSES, default=PENDING)
     post_link = models.CharField(
@@ -153,7 +182,7 @@ class Task(models.Model):
         verbose_name="цена заказа",
         max_digits=5, decimal_places=2, default=0
     )
-    _admin = models.ForeignKey(Admin, models.CASCADE)
+    _admin = models.ForeignKey(Admin, models.CASCADE, related_name="tasks")
     _creation_time = models.DateTimeField(
         verbose_name="время создания задания",
         auto_now_add=True
@@ -161,3 +190,6 @@ class Task(models.Model):
     _note = models.TextField(
         verbose_name="примечание", blank=True
     )
+
+    def __str__(self) -> str:
+        return self.short_name
