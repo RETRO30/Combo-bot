@@ -23,6 +23,22 @@ class Admin(models.Model):
     username = models.CharField(max_length=32)
     role = models.CharField(max_length=20, choices=ROLES, default=ADMIN)
 
+    def get_tasks(self) -> models.query.QuerySet:
+        """Возращает все задачи, созданные админом"""
+        return self.tasks.all()
+    
+    def get_tasks_by_status(self, statuses) -> models.query.QuerySet:
+        """Возращает все задачи, созданные админом, соответствующие статусу
+        
+        statuses -- int or iterable. If iterable, tasks with their status
+            in `statuses` are returned
+        """
+
+        if type(statuses) is int:
+            statuses = [statuses]
+        return self.tasks.filter(status__in=statuses)
+
+
 
 class Executor(models.Model):
     """Описывает модель исполнителя."""
