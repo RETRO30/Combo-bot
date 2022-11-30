@@ -42,6 +42,7 @@ async def menu(message):
     keyboard = get_buttons(message.text)
     if message['from'].id not in [executor.telegram_id for executor in Executor.objects.all()]:
         new_executor = Executor.objects.create(telegram_id=message['from'].id, username=message['from'].username)
+        new_executor.save()
     if message['from'].id in [admin.telegram_id for admin in Admin.objects.all()]:
         keyboard.add(types.InlineKeyboardButton('Панель администрирования', callback_data='admin_menu'))
     await bot.send_photo(message.chat.id, images.image_executor_menu, texts.text_menu,
