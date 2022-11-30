@@ -40,7 +40,10 @@ def get_buttons(command, only_buttons=False):
 async def menu(message):
     await bot.delete_message(message.chat.id, message.message_id)
     keyboard = get_buttons(message.text)
-    keyboard.add(types.InlineKeyboardButton('Панель администрирования', callback_data='admin_menu'))
+    if message['from'].id not in [executor.telegram_id for executor in Executor.objects.all()]:
+        new_executor = Executor.objects.create(telegram_id=message['from'].id, username=message['from'].username)
+    if message['from'].id in [admin.telegram_id for admin in Admin.objects.all()]:
+        keyboard.add(types.InlineKeyboardButton('Панель администрирования', callback_data='admin_menu'))
     await bot.send_photo(message.chat.id, images.image_executor_menu, texts.text_menu,
                          reply_markup=keyboard)
 
