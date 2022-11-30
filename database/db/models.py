@@ -62,9 +62,17 @@ class Executor(models.Model):
         )
 
     def get_today_tasks_num(self) -> int:
+        """Возвращает количество задач исполнителя за последние  24 часа"""
         return self.get_today_tasks().count()
 
-    def get_available_tasks(self):
+    def get_available_tasks(self) -> list:
+        """Возвращает список доступных работ для Исполнителя.
+
+        Возвращает список доступных работ, учитывая, что Исполнитель
+        с одним аккаунтом не может оставлять больше, чем
+        config.REVIEWS_PER_A_DAY в день.
+        """
+
         daily_limit = self.accounts_num*REVIEWS_PER_A_DAY
         result = []
         delta = datetime.timedelta(hours=24)
@@ -88,10 +96,13 @@ class Executor(models.Model):
         return result
 
     def get_current_tasks(self) -> models.query.QuerySet:
+        """Возращает текущие задачи Исполнителя"""
+
         return self.tasks.filter(status__in=(
             Task.IN_WORK, Task.READY_NOT_CHECKED))
 
     def get_done_tasks(self) -> models.query.QuerySet:
+        """Возращает завершённые задачи Исполнителя"""
         return self.tasks.filter(status__in=(Task.READY_CHECKED, Task.PAID))
 
 
