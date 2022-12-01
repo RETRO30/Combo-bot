@@ -8,6 +8,10 @@ from telebot import TeleBot, types
 bot = TeleBot(config.token)
 
 
+def send_notification(user_id, message):
+    bot.send_message(chat_id=user_id, text=message)
+
+
 def get_buttons(command, only_buttons=False):
     name_to_command = {'Главное меню': 'start',
                        'Задания': 'tasks_executor',
@@ -59,7 +63,7 @@ def callback_inline(call):
         if call.data[:5] == 'task_':
             keyboard = types.InlineKeyboardMarkup(row_width=2)
             task = Task.objects.get(id=int(call.data.replace('task_', '')))
-            text_for_task = ''
+            text_for_task = f'Название: {task.short_name}\nОписание:{task.description}\nСсылка:{task.post_link}'
             if task.status == 0:
                 keyboard.add(types.InlineKeyboardButton('Принять задание', callback_data=f'accept_task_{task.id}'))
 
