@@ -26,7 +26,7 @@ class Admin(models.Model):
     def get_tasks(self) -> models.query.QuerySet:
         """Возращает все задачи, созданные админом"""
         return self.tasks.all()
-    
+
     def get_tasks_by_status(self, statuses) -> models.query.QuerySet:
         """Возращает все задачи, созданные админом, соответствующие статусу
         
@@ -37,7 +37,6 @@ class Admin(models.Model):
         if type(statuses) is int:
             statuses = [statuses]
         return self.tasks.filter(status__in=statuses)
-
 
 
 class Executor(models.Model):
@@ -88,7 +87,7 @@ class Executor(models.Model):
         config.REVIEWS_PER_A_DAY в день.
         """
 
-        daily_limit = self.accounts_num*REVIEWS_PER_A_DAY
+        daily_limit = self.accounts_num * REVIEWS_PER_A_DAY
         result = []
         delta = datetime.timedelta(hours=24)
 
@@ -96,11 +95,11 @@ class Executor(models.Model):
             new_time = new_task.planned_time
 
             tasks_before_num = self.tasks.filter(planned_time__range=(
-                new_time-delta, new_time
+                new_time - delta, new_time
             )).count()
 
             tasks_after_num = self.tasks.filter(planned_time__range=(
-                new_time, new_time+delta
+                new_time, new_time + delta
             )).count()
 
             if tasks_before_num >= daily_limit or tasks_after_num >= daily_limit:
@@ -190,6 +189,23 @@ class Task(models.Model):
     _note = models.TextField(
         verbose_name="примечание", blank=True
     )
+
+    def mark_accepted(self, executor):
+        # отмечать когда пользователь берёт таск, статус = 1
+        pass
+
+    def mark_ready(self):
+        # отмечать когда пользователь присылает отчёт, статус = 2
+        pass
+
+    def mark_checked(self):
+        # отмечать когда проверено, статус = 3
+        pass
+
+    def mark_paid(self):
+        # отмечать когда оплачено, статус = 4
+        pass
+
 
     def __str__(self) -> str:
         return self.short_name

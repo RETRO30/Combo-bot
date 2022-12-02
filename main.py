@@ -4,6 +4,7 @@ import texts
 import images
 from telebot import TeleBot, types
 from django.utils import timezone
+from datetime import datetime
 
 bot = TeleBot(config.token)
 
@@ -74,8 +75,7 @@ def get_to_ready_task(message, executor, task):
     if not message.photo:
         bot.reply_to(message, 'Вы должны прислать скриншот выполненной работы')
         bot.register_next_step_handler(message, lambda msg: get_to_ready_task(msg, executor, task))
-    task.status = 2
-    task.save()
+    task.mark_ready()
     bot.send_message(executor.telegram_id, 'Отчёт принят')
     bot.send_photo(chat_id=task._admin.telegram_id, photo=message.photo[-1].file_id,
                    caption=f'Исполнитель прислал отчёт о выполненной работе, заказ: {task.short_name} #{task.id}')
@@ -131,9 +131,7 @@ def callback_inline(call):
             keyboard = get_buttons('task_')
             if task.status == 0 and \
                     current_executor.get_today_tasks_num() < current_executor.accounts_num * config.REVIEWS_PER_A_DAY:
-                task.status = 1
-                task.executor = current_executor
-                task.save()
+                task.mark_accepted(current_executor)
                 move_menu(call.message, texts.text_accept_task, images.image_executor_menu, keyboard)
             else:
                 move_menu(call.message, texts.text_accept_task_error, images.image_executor_menu, keyboard)
