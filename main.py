@@ -15,8 +15,15 @@ def move_menu(message, new_text, new_photo, keyboard):
 
 
 def str_time(time):
-    format = '%d.%m.%Y %H:%M'
+    format = '%d.%m.%Y %H:%M (по МСК)'
     return timezone.localtime(time).strftime(format)
+
+
+beautiful_name = {'Главное меню': '⚙️Главное меню',
+                  'Задания': '💰Задания',
+                  'Отзывы': '☎️Отзывы',
+                  'Оплата': '💳Оплата',
+                  'Тех-поддержка': '👨🏿‍🔧Тех-поддержка'}
 
 
 def get_buttons(command, only_buttons=False):
@@ -43,9 +50,13 @@ def get_buttons(command, only_buttons=False):
     res = []
     for button_name in buttons_for_command[command.replace('/', '')]:
         if name_to_command[button_name].startswith('https://t.me/'):
-            res.append(types.InlineKeyboardButton(button_name, url=name_to_command[button_name]))
+            res.append(types.InlineKeyboardButton(beautiful_name[button_name], url=name_to_command[button_name]))
         else:
-            res.append(types.InlineKeyboardButton(button_name, callback_data=name_to_command[button_name]))
+            if button_name in beautiful_name.keys():
+                res.append(types.InlineKeyboardButton(beautiful_name[button_name], callback_data=name_to_command[button_name]))
+            else:
+                res.append(
+                    types.InlineKeyboardButton(button_name, callback_data=name_to_command[button_name]))
     if only_buttons:
         return res
     keyboard.add(*res)
@@ -57,6 +68,17 @@ def add_payment_method_end(message):
     current_executor.payment_method = message.text
     current_executor.save()
     bot.reply_to(message, 'Способ оплаты обновлён.')
+
+
+def get_to_ready_task(message, executor, task):
+    if not message.photo:
+        bot.reply_to(message, 'Вы должны прислать скриншот выполненной работы')
+        bot.register_next_step_handler(message, lambda msg: get_to_ready_task(msg, executor, task))
+    task.status = 2
+    task.save()
+    bot.send_message(executor.telegram_id, 'Отчёт принят')
+    bot.send_photo(chat_id=task._admin.telegram_id, photo=message.photo[-1].file_id,
+                   caption=f'Исполнитель прислал отчёт о выполненной работе, заказ: {task.short_name} #{task.id}')
 
 
 @bot.message_handler(commands=['start'])
@@ -72,15 +94,24 @@ def menu(message):
 @bot.callback_query_handler(func=lambda call: True)
 def callback_inline(call):
     if call.message:
-        if call.data == 'edit_payment_method':
-            current_executor = Executor.objects.get(telegram_id=call.message.chat.id)
-            bot.send_message(call.message.chat.id,
-                             f'Текущий способ оплаты: {current_executor.payment_method}\nВведите новый способ оплаты:')
-            bot.register_next_step_handler(call.message, add_payment_method_end)
+        if call.data == 'cancel':
+            bot.clear_step_handler_by_chat_id(chat_id=call.message.chat.id)
+            bot.delete_message(call.message.chat.id, call.message.id)
 
         if call.data == 'edit_payment_method':
+            current_executor = Executor.objects.get(telegram_id=call.message.chat.id)
+            keyboard = types.InlineKeyboardMarkup()
+            keyboard.add(types.InlineKeyboardButton('Назад', callback_data='cancel'))
             bot.send_message(call.message.chat.id,
-                             f'Введите новый способ оплаты:')
+                             f'Текущий способ оплаты: {current_executor.payment_method}\nВведите новый способ оплаты:',
+                             reply_markup=keyboard)
+            bot.register_next_step_handler(call.message, add_payment_method_end)
+
+        if call.data == 'add_payment_method':
+            keyboard = types.InlineKeyboardMarkup()
+            keyboard.add(types.InlineKeyboardButton('Назад', callback_data='cancel'))
+            bot.send_message(call.message.chat.id,
+                             f'Введите новый способ оплаты:', reply_markup=keyboard)
             bot.register_next_step_handler(call.message, add_payment_method_end)
 
         if call.data == 'payment':
@@ -107,14 +138,27 @@ def callback_inline(call):
             else:
                 move_menu(call.message, texts.text_accept_task_error, images.image_executor_menu, keyboard)
 
+        if call.data.startswith('to_ready_task_'):
+            task = Task.objects.get(id=int(call.data.replace('to_ready_task_', '')))
+            current_executor = Executor.objects.get(telegram_id=call.message.chat.id)
+            keyboard = types.InlineKeyboardMarkup()
+            keyboard.add(types.InlineKeyboardButton('Назад', callback_data='cancel'))
+            bot.send_message(call.message.chat.id,
+                             'Отправьте скриншот выполненой работы',
+                             reply_markup=keyboard)
+            bot.register_next_step_handler(call.message, lambda msg: get_to_ready_task(msg, current_executor, task))
+
         if call.data.startswith('task_'):
             keyboard = types.InlineKeyboardMarkup(row_width=2)
             task = Task.objects.get(id=int(call.data.replace('task_', '')))
-            text_for_task = f'{task.short_name}\n{task.description}' \
-                            f'\n{task.post_link}\n{task.execution_price} рублей' \
-                            f'\n{str_time(task.planned_time)}'
+            text_for_task = f'❗{task.short_name}\n❗{task.description}' \
+                            f'\n❗{task.post_link}\n❗{task.execution_price} рублей' \
+                            f'\n❗{str_time(task.planned_time)}' \
+                            f'\n❗{task.STATUSES[task.status][1]}'
             if task.status == 0:
                 keyboard.add(types.InlineKeyboardButton('Принять задание', callback_data=f'accept_task_{task.id}'))
+            if task.status == 1:
+                keyboard.add(types.InlineKeyboardButton('Готово', callback_data=f'to_ready_task_{task.id}'))
 
             buttons = get_buttons('task_', only_buttons=True)
             keyboard.add(*buttons)
@@ -125,14 +169,16 @@ def callback_inline(call):
             current_executor = Executor.objects.get(telegram_id=call.message.chat.id)
             res = []
             for task in current_executor.get_current_tasks():
-                res.append(types.InlineKeyboardButton(f'{task.short_name} #{str(task.id)} - В работе',
-                                                      callback_data='task_' + str(task.id)))
+                res.append(
+                    types.InlineKeyboardButton(f'{str_time(task.planned_time)} - {task.short_name} #{str(task.id)} ⏳',
+                                               callback_data='task_' + str(task.id)))
             for task in current_executor.get_done_tasks():
-                res.append(types.InlineKeyboardButton(f'{task.short_name} #{str(task.id)} - Завершено',
+                res.append(types.InlineKeyboardButton(f'{task.short_name} #{str(task.id)} ✅',
                                                       callback_data='task_' + str(task.id)))
             for task in current_executor.get_available_tasks():
-                res.append(types.InlineKeyboardButton(f'{task.short_name} #{str(task.id)} - Доступно',
-                                                      callback_data='task_' + str(task.id)))
+                res.append(
+                    types.InlineKeyboardButton(f'{str_time(task.planned_time)} - {task.short_name} #{str(task.id)} ❕ ',
+                                               callback_data='task_' + str(task.id)))
             keyboard.add(*res)
 
             buttons = get_buttons(call.data, only_buttons=True)
