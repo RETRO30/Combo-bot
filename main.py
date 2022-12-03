@@ -129,7 +129,7 @@ def callback_inline(call):
             task = Task.objects.get(id=int(call.data.replace('accept_task_', '')))
             current_executor = Executor.objects.get(telegram_id=call.message.chat.id)
             keyboard = get_buttons('task_')
-            if task.status == 0 and \
+            if task.status == Task.PENDING and \
                     current_executor.get_today_tasks_num() < current_executor.accounts_num * config.REVIEWS_PER_A_DAY:
                 task.mark_accepted(current_executor)
                 move_menu(call.message, texts.text_accept_task, images.image_executor_menu, keyboard)
@@ -153,9 +153,9 @@ def callback_inline(call):
                             f'\n❗{task.post_link}\n❗{task.execution_price} рублей' \
                             f'\n❗{str_time(task.planned_time)}' \
                             f'\n❗{task.STATUSES[task.status][1]}'
-            if task.status == 0:
+            if task.status == Task.PENDING:
                 keyboard.add(types.InlineKeyboardButton('Принять задание', callback_data=f'accept_task_{task.id}'))
-            if task.status == 1:
+            if task.status == Task.IN_WORK:
                 keyboard.add(types.InlineKeyboardButton('Готово', callback_data=f'to_ready_task_{task.id}'))
 
             buttons = get_buttons('task_', only_buttons=True)
