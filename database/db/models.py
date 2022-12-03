@@ -1,11 +1,10 @@
 import datetime
 
-from django.core.validators import RegexValidator
 from django.db import models
 from django.db.models import Q
 from django.utils import timezone
 
-from config import REVIEWS_PER_A_DAY
+from config import REVIEWS_PER_A_DAY, FUCK_UP_TIME
 
 
 class Admin(models.Model):
@@ -191,20 +190,33 @@ class Task(models.Model):
     )
 
     def mark_accepted(self, executor):
-        # отмечать когда пользователь берёт таск, статус = 1
-        pass
+        # отметить задачу принятой исполнителем
+        self.status = Task.IN_WORK
+        self.accepted_time = timezone.now()
+        self.executor = executor
+        self.save()
 
+    
     def mark_ready(self):
-        # отмечать когда пользователь присылает отчёт, статус = 2
-        pass
+        # отметить задачу готовой, при этом проверяя,
+        # выполнил ли человек задания в срок
+        self.executed_time = timezone.now()
+
+        if self.executed_time - self.accepted_time > FUCK_UP_TIME:
+            self.status = Task.FUCKED_UP
+        else:
+            self.status = Task.READY_NOT_CHECKED
+        self.save()
 
     def mark_checked(self):
-        # отмечать когда проверено, статус = 3
-        pass
-
+        # отметить задачу проверенной, но не оплаченной
+        self.status = Task.READY_CHECKED
+        self.save()
+    
     def mark_paid(self):
-        # отмечать когда оплачено, статус = 4
-        pass
+        # отметить задачу оплаченной
+        self.status = Task.PAID
+        self.save()
 
 
     def __str__(self) -> str:
