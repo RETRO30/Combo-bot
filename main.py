@@ -129,8 +129,7 @@ def callback_inline(call):
             task = Task.objects.get(id=int(call.data.replace('accept_task_', '')))
             current_executor = Executor.objects.get(telegram_id=call.message.chat.id)
             keyboard = get_buttons('task_')
-            if task.status == Task.PENDING and \
-                    current_executor.get_today_tasks_num() < current_executor.accounts_num * config.REVIEWS_PER_A_DAY:
+            if task.status == Task.PENDING:
                 task.mark_accepted(current_executor)
                 move_menu(call.message, texts.text_accept_task, images.image_executor_menu, keyboard)
             else:
