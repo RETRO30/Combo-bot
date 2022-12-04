@@ -38,6 +38,7 @@ def time_str(time):
 beautiful_name = {'Главное меню': '⚙️Главное меню',
                   'Задания': '💰Задания',
                   'Отзывы': '☎️Отзывы',
+                  'Гайды': '📜 Гайды',
                   'Оплата': '💳Оплата',
                   'Тех-поддержка': '👨🏿‍🔧Тех-поддержка'}
 
@@ -49,25 +50,29 @@ def get_buttons(command, only_buttons=False):
                        'Вернуться ко всем заказам': 'tasks_for_admins',
                        'Вернуться ко всем неоплаченным заказам': 'unpaid_tasks_for_admins',
                        'Отзывы': 'https://t.me/+XIa54kP106AwZjgy',
+                       'Гайды': 'https://t.me/+FLhhvT5ZNHM4MDky',
+                       'Жалобы на исполнителей': 'https://t.me/+ZTkl2mi_B8I5ZGQ6',
                        'Оплата': 'payment',
                        'Тех-поддержка': 'support',
                        'Создать заказ': 'create_task',
                        'Информация для админов': 'https://t.me/+TmIUUWpRgPE1N2Uy',
                        'Заказы': 'tasks_for_admins',
                        'Неоплаченные заказы': 'unpaid_tasks_for_admins',
-                       'Назад к панели администрирования': 'admin_menu'}
-    buttons_for_command = {'start': ['Задания', 'Отзывы', 'Оплата', 'Тех-поддержка'],
+                       'Назад к панели администрирования': 'admin_menu',
+                       'Добавить администратора': 'add_admin'}
+    buttons_for_command = {'start': ['Задания', 'Отзывы', 'Гайды', 'Оплата', 'Тех-поддержка'],
                            'test': ['Главное меню'],
                            'payment': ['Главное меню'],
                            'task_': ['Вернуться ко всем заданиям'],
                            'admin_task_': ['Вернуться ко всем заказам'],
                            'admin_unpaid_task_': ['Вернуться ко всем неоплаченным заказам'],
                            'support': ['Главное меню'],
-                           'admin_menu': ['Создать заказ', 'Заказы', 'Неоплаченные заказы', 'Главное меню',
-                                          'Информация для админов'],
+                           'admin_menu': ['Создать заказ', 'Заказы', 'Неоплаченные заказы', 'Жалобы на исполнителей',
+                                          'Информация для админов', 'Главное меню'],
                            'tasks_for_admins': ['Назад к панели администрирования'],
                            'unpaid_tasks_for_admins': ['Назад к панели администрирования'],
-                           'tasks_executor': ['Главное меню']}
+                           'tasks_executor': ['Главное меню'],
+                           'manage_admins': ['Добавить администратора', 'Назад к панели администрирования']}
     keyboard = types.InlineKeyboardMarkup(row_width=2)
     res = []
     for button_name in buttons_for_command[command.replace('/', '')]:
@@ -133,6 +138,35 @@ def create_task(message, admin_id):
     else:
         bot.send_message(message.chat.id, 'Заказ создан.')
         new_task.save()
+
+
+def add_admin(message):
+    data = [_.strip() for _ in message.text[1:].split('-')]
+    try:
+        admin = Admin.objects.create(telegram_id=data[0], username=data[1])
+    except Exception as e:
+        bot.send_message(message.chat.id, 'Возникла какая-то ошибка.')
+    else:
+        bot.send_message(message.chat.id, 'Администратор создан.')
+        admin.save()
+
+
+def edit_task(message, task):
+    data = [_.strip() for _ in message.text[1:].split('-')]
+    try:
+        task.short_name = data[0],
+        task.post_link = data[1],
+        task.planned_time = time_str(data[2]),
+        task.description = data[3],
+        task.feedback_content = data[4],
+        task.execution_price = data[6],
+        _order_price = float(data[5])
+        task._note = data[7]
+    except Exception as e:
+        bot.send_message(message.chat.id, 'Возникла какая-то ошибка.')
+    else:
+        bot.send_message(message.chat.id, 'Заказ изменён.')
+        task.save()
 
 
 @bot.message_handler(commands=['start'])
@@ -270,6 +304,8 @@ def callback_inline(call):
             if call.message.chat.id in [admin[0] for admin in Admin.objects.values_list('telegram_id', 'role') if
                                         admin[1] == 'super-admin']:
                 keyboard.add(types.InlineKeyboardButton('Управление администрацией', callback_data='manage_admins'))
+                keyboard.add(types.InlineKeyboardButton('Узнать id исполнителя', callback_data='get_id_executor'))
+                keyboard.add(types.InlineKeyboardButton('Заблокировать исполнителя', callback_data='ban_executor'))
             move_menu(call.message, texts.text_menu, images.image_admin_menu, keyboard)
 
         if call.data.startswith('admin_task_'):
@@ -284,16 +320,32 @@ def callback_inline(call):
             if task.status != Task.PENDING:
                 text_for_task += f'\n❗Исполнитель: @{task.executor.username}' \
                                  f'\n❗Метод оплаты: {task.executor.payment_method}'
-
+            keyboard.add(types.InlineKeyboardButton('Изменить', callback_data='edit_task_' + str(task.id)))
+            keyboard.add(types.InlineKeyboardButton('Удалить', callback_data='delete_task_' + str(task.id)))
             buttons = get_buttons('admin_task_', only_buttons=True)
             keyboard.add(*buttons)
             move_menu(call.message, text_for_task, images.image_executor_menu, keyboard)
+
+        if call.data.startswith('edit_task_'):
+            task = Task.objects.get(id=int(call.data.replace('edit_task_', '')))
+            keyboard = types.InlineKeyboardMarkup()
+            keyboard.add(types.InlineKeyboardButton('Назад', callback_data='cancel'))
+            bot.send_message(call.message.chat.id,
+                             f'Изменить заказ.\nЗаполните следующие пункты\n{texts.text_create_task}',
+                             reply_markup=keyboard)
+            bot.register_next_step_handler(call.message, lambda msg: edit_task(msg, task))
+
+        if call.data.startswith('delete_task_'):
+            task = Task.objects.get(id=int(call.data.replace('delete_task_', '')))
+            task.delete()
+            bot.send_message(call.message.chat.id,
+                             'Заказ удалён')
 
         if call.data.startswith('admin_unpaid_task_'):
             keyboard = types.InlineKeyboardMarkup(row_width=2)
             task = Task.objects.get(id=int(call.data.replace('admin_unpaid_task_', '')))
             text_for_task = f'❗Название: {task.short_name}\n❗Описание: {task.description}' \
-                            f'\n❗Ссылка: {task.post_link}\n❗Цена для исполнителя{task.execution_price} рублей' \
+                            f'\n❗Ссылка: {task.post_link}\n❗Цена для исполнителя: {task.execution_price} рублей' \
                             f'\n❗Цена заказа: {task._order_price}' \
                             f'\n❗Отзыв: {task.feedback_content}' \
                             f'\n❗Время: {str_time(task.planned_time)}' \
@@ -341,6 +393,40 @@ def callback_inline(call):
             buttons = get_buttons(call.data, only_buttons=True)
             keyboard.add(*buttons)
             move_menu(call.message, texts.text_menu, images.image_executor_menu, keyboard)
+
+        if call.data == 'manage_admins':
+            keyboard = types.InlineKeyboardMarkup(row_width=1)
+            for admin in [admin for admin in Admin.objects.values_list('telegram_id', 'username')]:
+                keyboard.add(types.InlineKeyboardButton(f'{admin[1]}', callback_data=f'info_admin_{admin[0]}'))
+            buttons = get_buttons(call.data, only_buttons=True)
+            keyboard.add(*buttons)
+            move_menu(call.message, texts.text_manage_admins, images.image_admin_menu, keyboard)
+
+        if call.data.startswith('info_admin_'):
+            admin = Admin.objects.get(telegram_id=call.data.replace('info_admin_', ''))
+            text_admin = f'{admin.telegram_id}\n@{admin.username}\n{admin.role}'
+            keyboard = types.InlineKeyboardMarkup(row_width=1)
+            keyboard.add(types.InlineKeyboardButton('Удалить', callback_data=f'delete_admin_{admin.telegram_id}'))
+            keyboard.add(types.InlineKeyboardButton('Вернутся к списку администраторов', callback_data='manage_admins'))
+            move_menu(call.message, text_admin, images.image_admin_menu, keyboard)
+
+        if call.data.startswith('delete_admin_'):
+            admin = Admin.objects.get(telegram_id=call.data.replace('delete_admin_', ''))
+            admin.delete()
+            bot.send_message(chat_id=call.message.chat.id, text='Администратор удалён.')
+
+        if call.data == 'add_admin':
+            keyboard = types.InlineKeyboardMarkup()
+            keyboard.add(types.InlineKeyboardButton('Назад', callback_data='cancel'))
+            bot.send_message(call.message.chat.id,
+                             f'Добавить администратора.\nЗаполните следующие пункты\n{texts.text_add_admin}',
+                             reply_markup=keyboard)
+            bot.register_next_step_handler(call.message, lambda msg: add_admin(msg))
+
+        if call.data == 'get_id_executor':
+            pass
+        if call.data == 'ban_executor':
+            pass
 
 
 @bot.message_handler(func=lambda message: True)
