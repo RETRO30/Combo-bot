@@ -1,4 +1,8 @@
-image_executor_menu = 'for_test.png'
-image_admin_menu = 'for_test.png'
-image_support_menu = 'for_test.png'
-
+image_executor_menu = 'главное меню.png'
+image_admin_menu = 'панель админ.png'
+image_support_menu = 'техподдержка.png'
+image_executor_payment = 'оплата.png'
+image_accept_task = 'успешно.png'
+image_error = 'ошибка.png'
+image_executor_task = 'задание.png'
+image_executor_tasks = 'задания.png'

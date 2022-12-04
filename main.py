@@ -11,8 +11,16 @@ bot = TeleBot(config.token)
 
 def move_menu(message, new_text, new_photo, keyboard):
     bot.delete_message(message.chat.id, message.id)
-    bot.send_photo(message.chat.id, types.InputFile(new_photo), new_text,
-                   reply_markup=keyboard)
+    if new_text:
+        if new_photo:
+            bot.send_photo(message.chat.id, types.InputFile(new_photo), new_text,
+                           reply_markup=keyboard)
+        else:
+            bot.send_message(message.chat.id, new_text,
+                             reply_markup=keyboard)
+    else:
+        bot.send_photo(message.chat.id, types.InputFile(new_photo),
+                       reply_markup=keyboard)
 
 
 status_to_emoji = {0: '❕',
@@ -169,6 +177,17 @@ def edit_task(message, task):
         task.save()
 
 
+def get_id_executor(message):
+    bot.send_message(message.chat.id, f'ID: {Executor.objects.get(username=message.text).telegram_id}')
+
+
+def ban_executor(message):
+    data = [_.strip() for _ in message.text[1:].split('-')]
+    executor = Executor.objects.get(telegram_id=int(data[0]))
+    executor.time_unbanned = time_str(data[1])
+    bot.send_message(message.chat.id, 'Вы забанили исполнителя')
+
+
 @bot.message_handler(commands=['start'])
 def menu(message):
     keyboard = get_buttons(message.text)
@@ -211,7 +230,7 @@ def callback_inline(call):
             else:
                 keyboard.add(types.InlineKeyboardButton('Добавить способ оплаты', callback_data='add_payment_method'))
             keyboard.add(*buttons)
-            move_menu(call.message, texts.text_payment, images.image_executor_menu, keyboard)
+            move_menu(call.message, texts.text_payment, images.image_executor_payment, keyboard)
 
         if call.data.startswith('accept_task_'):
             task = Task.objects.get(id=int(call.data.replace('accept_task_', '')))
@@ -219,9 +238,9 @@ def callback_inline(call):
             keyboard = get_buttons('task_')
             if task.status == Task.PENDING:
                 task.mark_accepted(current_executor)
-                move_menu(call.message, texts.text_accept_task, images.image_executor_menu, keyboard)
+                move_menu(call.message, texts.text_accept_task, images.image_accept_task, keyboard)
             else:
-                move_menu(call.message, texts.text_accept_task_error, images.image_executor_menu, keyboard)
+                move_menu(call.message, texts.text_accept_task_error, images.image_error, keyboard)
 
         if call.data.startswith('to_ready_task_'):
             task = Task.objects.get(id=int(call.data.replace('to_ready_task_', '')))
@@ -247,7 +266,7 @@ def callback_inline(call):
 
             buttons = get_buttons('task_', only_buttons=True)
             keyboard.add(*buttons)
-            move_menu(call.message, text_for_task, images.image_executor_menu, keyboard)
+            move_menu(call.message, text_for_task, images.image_executor_task, keyboard)
 
         if call.data == 'tasks_executor':
             keyboard = types.InlineKeyboardMarkup(row_width=1)
@@ -272,7 +291,7 @@ def callback_inline(call):
             buttons = get_buttons(call.data, only_buttons=True)
 
             keyboard.add(*buttons)
-            move_menu(call.message, texts.text_menu, images.image_executor_menu, keyboard)
+            move_menu(call.message, texts.text_tasks, images.image_executor_tasks, keyboard)
 
         if call.data == 'start':
             keyboard = get_buttons(call.data)
@@ -282,7 +301,7 @@ def callback_inline(call):
 
         if call.data == 'support':
             keyboard = get_buttons(call.data)
-            move_menu(call.message, texts.text_support, images.image_executor_menu, keyboard)
+            move_menu(call.message, texts.text_support, images.image_support_menu, keyboard)
 
         if call.data.startswith('admin_accept_'):
             task = Task.objects.get(id=int(call.data.replace('admin_accept_', '')))
@@ -306,7 +325,7 @@ def callback_inline(call):
                 keyboard.add(types.InlineKeyboardButton('Управление администрацией', callback_data='manage_admins'))
                 keyboard.add(types.InlineKeyboardButton('Узнать id исполнителя', callback_data='get_id_executor'))
                 keyboard.add(types.InlineKeyboardButton('Заблокировать исполнителя', callback_data='ban_executor'))
-            move_menu(call.message, texts.text_menu, images.image_admin_menu, keyboard)
+            move_menu(call.message, '', images.image_admin_menu, keyboard)
 
         if call.data.startswith('admin_task_'):
             keyboard = types.InlineKeyboardMarkup(row_width=2)
@@ -324,7 +343,7 @@ def callback_inline(call):
             keyboard.add(types.InlineKeyboardButton('Удалить', callback_data='delete_task_' + str(task.id)))
             buttons = get_buttons('admin_task_', only_buttons=True)
             keyboard.add(*buttons)
-            move_menu(call.message, text_for_task, images.image_executor_menu, keyboard)
+            move_menu(call.message, text_for_task, images.image_admin_menu, keyboard)
 
         if call.data.startswith('edit_task_'):
             task = Task.objects.get(id=int(call.data.replace('edit_task_', '')))
@@ -362,7 +381,7 @@ def callback_inline(call):
         if call.data.startswith('mark_paid_'):
             task = Task.objects.get(id=int(call.data.replace('mark_paid_', '')))
             task.mark_paid()
-            bot.send_message(chat_id=call.message.chat.id, text='Отзыв помечен оплаченным')
+            bot.send_message(chat_id=call.message.chat.id, text='Заказ помечен оплаченным')
 
         if call.data == 'create_task':
             keyboard = types.InlineKeyboardMarkup()
@@ -381,7 +400,7 @@ def callback_inline(call):
                     callback_data='admin_task_' + str(task.id)))
             buttons = get_buttons(call.data, only_buttons=True)
             keyboard.add(*buttons)
-            move_menu(call.message, texts.text_menu, images.image_executor_menu, keyboard)
+            move_menu(call.message, texts.text_tasks_for_admins, images.image_admin_menu, keyboard)
 
         if call.data == 'unpaid_tasks_for_admins':
             keyboard = types.InlineKeyboardMarkup(row_width=1)
@@ -392,7 +411,7 @@ def callback_inline(call):
                     callback_data='admin_unpaid_task_' + str(task.id)))
             buttons = get_buttons(call.data, only_buttons=True)
             keyboard.add(*buttons)
-            move_menu(call.message, texts.text_menu, images.image_executor_menu, keyboard)
+            move_menu(call.message, texts.text_unpaid_tasks_for_admins, images.image_admin_menu, keyboard)
 
         if call.data == 'manage_admins':
             keyboard = types.InlineKeyboardMarkup(row_width=1)
@@ -424,9 +443,20 @@ def callback_inline(call):
             bot.register_next_step_handler(call.message, lambda msg: add_admin(msg))
 
         if call.data == 'get_id_executor':
-            pass
+            keyboard = types.InlineKeyboardMarkup()
+            keyboard.add(types.InlineKeyboardButton('Назад', callback_data='cancel'))
+            bot.send_message(call.message.chat.id,
+                             f'Получить id пользователя.\nВведите username:',
+                             reply_markup=keyboard)
+            bot.register_next_step_handler(call.message, lambda msg: get_id_executor(msg))
+
         if call.data == 'ban_executor':
-            pass
+            keyboard = types.InlineKeyboardMarkup()
+            keyboard.add(types.InlineKeyboardButton('Назад', callback_data='cancel'))
+            bot.send_message(call.message.chat.id,
+                             f'Заблокировать пользователя.\nВведите\n-id\n-дд.мм.гггг чч:мм (время разбана)',
+                             reply_markup=keyboard)
+            bot.register_next_step_handler(call.message, lambda msg: ban_executor(msg))
 
 
 @bot.message_handler(func=lambda message: True)
