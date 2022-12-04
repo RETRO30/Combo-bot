@@ -218,6 +218,10 @@ class Task(models.Model):
         self.status = Task.PAID
         self.save()
 
+    def mark_fuckedup(self):
+        self.status = Task.FUCKED_UP
+        self.save()
+
 
     def __str__(self) -> str:
         return self.short_name
