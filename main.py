@@ -466,4 +466,8 @@ async def reply_message(message):
 
 
 if __name__ == '__main__':
-    bot.infinity_polling()
+    while True:
+        try:
+            bot.polling()
+        except Exception:
+            pass
