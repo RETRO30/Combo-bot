@@ -6,6 +6,7 @@ from telebot import TeleBot, types
 from django.utils import timezone
 from datetime import datetime
 
+
 bot = TeleBot(config.token)
 
 
@@ -466,8 +467,4 @@ async def reply_message(message):
 
 
 if __name__ == '__main__':
-    while True:
-        try:
-            bot.polling()
-        except Exception:
-            pass
+        bot.infinity_polling()
