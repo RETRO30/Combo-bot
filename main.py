@@ -296,6 +296,8 @@ def callback_inline(call):
 
         if call.data == 'start':
             keyboard = get_buttons(call.data)
+            if call.message.chat.id not in [executor for executor in Executor.objects.values_list('telegram_id', flat=True)]:
+                Executor.objects.create(telegram_id=call.message.chat.id, username=call.message.chat.username)
             if call.message.chat.id in [admin for admin in Admin.objects.values_list('telegram_id', flat=True)]:
                 keyboard.add(types.InlineKeyboardButton('Панель администрирования', callback_data='admin_menu'))
             move_menu(call.message, texts.text_menu, images.image_executor_menu, keyboard)
