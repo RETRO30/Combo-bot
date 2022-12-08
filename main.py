@@ -143,6 +143,7 @@ def create_task(message, admin_id):
                                        _order_price=float(data[5]))
         new_task._note = data[7]
     except Exception as e:
+        print(e)
         bot.send_message(message.chat.id, 'Возникла какая-то ошибка.')
     else:
         bot.send_message(message.chat.id, 'Заказ создан.')
