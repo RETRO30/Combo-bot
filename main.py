@@ -347,7 +347,7 @@ def callback_inline(call):
             keyboard.add(types.InlineKeyboardButton('Удалить', callback_data='delete_task_' + str(task.id)))
             buttons = get_buttons('admin_task_', only_buttons=True)
             keyboard.add(*buttons)
-            move_menu(call.message, new_text=text_for_task, new_photo=0, keyboard)
+            move_menu(call.message, new_text=text_for_task, new_photo=0, keyboard=keyboard)
 
         if call.data.startswith('edit_task_'):
             task = Task.objects.get(id=int(call.data.replace('edit_task_', '')))
@@ -380,7 +380,7 @@ def callback_inline(call):
             keyboard.add(types.InlineKeyboardButton('Оплачено', callback_data='mark_paid_' + str(task.id)))
             buttons = get_buttons('admin_unpaid_task_', only_buttons=True)
             keyboard.add(*buttons)
-            move_menu(call.message, new_text=text_for_task, new_photo=0, keyboard)
+            move_menu(call.message, new_text=text_for_task, new_photo=0, keyboard=keyboard)
 
         if call.data.startswith('mark_paid_'):
             task = Task.objects.get(id=int(call.data.replace('mark_paid_', '')))
