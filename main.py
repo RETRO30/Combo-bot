@@ -6,7 +6,6 @@ from telebot import TeleBot, types
 from django.utils import timezone
 from datetime import datetime
 
-
 bot = TeleBot(config.token)
 
 
@@ -115,19 +114,20 @@ def get_to_ready_task(message, executor, task):
         bot.reply_to(message, 'Вы должны прислать скриншот выполненной работы')
         bot.register_next_step_handler(message, lambda msg: get_to_ready_task(msg, executor, task))
     task.mark_ready()
-    if task.status == Task.READY_NOT_CHECKED:
-        keyboard = types.InlineKeyboardMarkup(row_width=3)
-        keyboard.add(types.InlineKeyboardButton('Принять', callback_data=f'admin_accept_{task.id}'))
-        keyboard.add(types.InlineKeyboardButton('На доработку', callback_data=f'admin_to_finalize_{task.id}'))
-        keyboard.add(types.InlineKeyboardButton('Отклонить', callback_data=f'admin_cancel_{task.id}'))
-        bot.send_message(executor.telegram_id, 'Отчёт принят')
-        bot.send_photo(chat_id=task._admin.telegram_id, photo=message.photo[-1].file_id,
-                       caption=f'Исполнитель прислал отчёт о выполненной работе, заказ: {task.short_name} #{task.id}. Исполнитель: @{executor.username}',
-                       reply_markup=keyboard)
-    elif task.status == Task.FUCKED_UP:
-        bot.send_message(executor.telegram_id, 'Вы выполнили задание не вовремя')
-        bot.send_photo(chat_id=task._admin.telegram_id, photo=message.photo[-1].file_id,
-                       caption=f'Исполнитель просрал заказ: {task.short_name} #{task.id}. Исполнитель: @{executor.username}')
+    keyboard = types.InlineKeyboardMarkup(row_width=3)
+    keyboard.add(types.InlineKeyboardButton('Принять', callback_data=f'admin_accept_{task.id}'))
+    keyboard.add(types.InlineKeyboardButton('На доработку', callback_data=f'admin_to_finalize_{task.id}'))
+    keyboard.add(types.InlineKeyboardButton('Отклонить', callback_data=f'admin_cancel_{task.id}'))
+    bot.send_message(executor.telegram_id, 'Отчёт принят')
+    bot.send_photo(chat_id=task._admin.telegram_id, photo=message.photo[-1].file_id,
+                   caption=f'Исполнитель прислал отчёт о выполненной работе, заказ: {task.short_name} #{task.id}. Исполнитель: @{executor.username}',
+                   reply_markup=keyboard)
+
+
+'''elif task.status == Task.FUCKED_UP:
+    bot.send_message(executor.telegram_id, 'Вы выполнили задание не вовремя')
+    bot.send_photo(chat_id=task._admin.telegram_id, photo=message.photo[-1].file_id,
+                   caption=f'Исполнитель просрал заказ: {task.short_name} #{task.id}. Исполнитель: @{executor.username}')'''
 
 
 def create_task(message, admin_id):
@@ -297,7 +297,8 @@ def callback_inline(call):
 
         if call.data == 'start':
             keyboard = get_buttons(call.data)
-            if call.message.chat.id not in [executor for executor in Executor.objects.values_list('telegram_id', flat=True)]:
+            if call.message.chat.id not in [executor for executor in
+                                            Executor.objects.values_list('telegram_id', flat=True)]:
                 Executor.objects.create(telegram_id=call.message.chat.id, username=call.message.chat.username)
             if call.message.chat.id in [admin for admin in Admin.objects.values_list('telegram_id', flat=True)]:
                 keyboard.add(types.InlineKeyboardButton('Панель администрирования', callback_data='admin_menu'))
@@ -470,4 +471,4 @@ async def reply_message(message):
 
 
 if __name__ == '__main__':
-        bot.infinity_polling()
+    bot.infinity_polling()
