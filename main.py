@@ -164,12 +164,12 @@ def add_admin(message):
 def edit_task(message, task):
     data = [_.strip() for _ in message.text[1:].split('-')]
     try:
-        task.short_name = data[0],
-        task.post_link = data[1],
-        task.planned_time = time_str(data[2]),
-        task.description = data[3],
-        task.feedback_content = data[4],
-        task.execution_price = data[6],
+        task.short_name = data[0]
+        task.post_link = data[1]
+        task.planned_time = time_str(data[2])
+        task.description = data[3]
+        task.feedback_content = data[4]
+        task.execution_price = data[6]
         _order_price = float(data[5])
         task._note = data[7]
     except Exception as e:
