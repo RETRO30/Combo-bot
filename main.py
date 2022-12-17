@@ -277,7 +277,7 @@ def callback_inline(call):
             for task in current_executor.get_current_tasks():
                 res.append(
                     types.InlineKeyboardButton(
-                        f'{str_time(task.planned_time)} - {task.short_name} #{str(task.id)} {status_to_emoji[task.status]}',
+                        f'{status_to_emoji[task.status]} №{str(task.id)} {str_time(task.planned_time)}',
                         callback_data='task_' + str(task.id)))
             for task in current_executor.get_done_tasks():
                 res.append(
@@ -286,7 +286,7 @@ def callback_inline(call):
             for task in current_executor.get_available_tasks():
                 res.append(
                     types.InlineKeyboardButton(
-                        f'{str_time(task.planned_time)} - {task.short_name} #{str(task.id)} {status_to_emoji[task.status]}',
+                        f'{status_to_emoji[task.status]} №{str(task.id)} {str_time(task.planned_time)}',
                         callback_data='task_' + str(task.id)))
             keyboard.add(*res)
 
@@ -401,7 +401,7 @@ def callback_inline(call):
             admin = Admin.objects.get(telegram_id=call.message.chat.id)
             for task in admin.get_tasks():
                 keyboard.add(types.InlineKeyboardButton(
-                    f'{str_time(task.planned_time)} - {task.short_name} #{str(task.id)} {status_to_emoji[task.status]}',
+                    f'{status_to_emoji[task.status]} №{str(task.id)} {str_time(task.planned_time)}',
                     callback_data='admin_task_' + str(task.id)))
             buttons = get_buttons(call.data, only_buttons=True)
             keyboard.add(*buttons)
@@ -412,7 +412,7 @@ def callback_inline(call):
             admin = Admin.objects.get(telegram_id=call.message.chat.id)
             for task in admin.get_tasks_by_status(Task.READY_CHECKED):
                 keyboard.add(types.InlineKeyboardButton(
-                    f'{str_time(task.planned_time)} - {task.short_name} #{str(task.id)} {status_to_emoji[task.status]}',
+                    f'{status_to_emoji[task.status]} №{str(task.id)} {str_time(task.planned_time)}',
                     callback_data='admin_unpaid_task_' + str(task.id)))
             buttons = get_buttons(call.data, only_buttons=True)
             keyboard.add(*buttons)
