@@ -2,6 +2,6 @@ pyTelegramBotAPI==4.8.0
 asgiref==3.5.2
 Django
 requests
-idna==3.4
+idna==3.7
 pytz==2022.6
 sqlparse
